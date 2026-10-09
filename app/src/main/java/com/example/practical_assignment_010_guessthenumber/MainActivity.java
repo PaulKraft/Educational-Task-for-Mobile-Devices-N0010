@@ -1,117 +1,138 @@
 package com.example.practical_assignment_010_guessthenumber;
 
 import android.os.Bundle;
-
-import androidx.activity.EdgeToEdge;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import android.widget.Button;
-import android.widget.Toast;
 import android.widget.EditText;
-import java.util.Random;
+import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
-    private Random random = new Random();
-    private int secretNumber;
-    private int attempts = 0;
 
-    public void startNewGame() {
+    private GuessNumberGame game;
+    private NumberGenerator generator;
 
-        secretNumber = generateNumber();
-//        secretNumber = 50;
-        attempts = 0;
-
-    }
-
-    private int generateNumber() {
-//        return random.nextInt(100) + 1;
-        return 50;
-    }
+    private EditText editGuess;
+    private Button buttonCheck;
+    private Button buttonNewGame;
+    private TextView textResult;
+    private TextView textAttempts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
 
         setContentView(R.layout.activity_main);
 
-        startNewGame();
+        initializeViews();
 
-        Button buttonNewGame = findViewById(R.id.buttonNewGame);
-        Button buttonCheck = findViewById(R.id.buttonCheck);
-        EditText editTextGuess = findViewById(R.id.editTextGuess);
+        generator = new RandomNumberGenerator();
+        game = new GuessNumberGame(generator.generate());
 
+        buttonCheck.setOnClickListener(v -> checkGuess());
+        buttonNewGame.setOnClickListener(v -> startNewGame());
 
+        updateAttempts();
+        textResult.setText("Вгадайте число від 1 до 100");
+    }
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
+    private void initializeViews() {
+        editGuess = findViewById(R.id.editGuess);
+        buttonCheck = findViewById(R.id.buttonCheck);
+        buttonNewGame = findViewById(R.id.buttonNewGame);
+        textResult = findViewById(R.id.textResult);
+        textAttempts = findViewById(R.id.textAttempts);
+    }
 
-        buttonNewGame.setOnClickListener(v -> {
-            startNewGame();
-            editTextGuess.setText("");
-            buttonCheck.setEnabled(true);
-            editTextGuess.setEnabled(true);
-            Toast.makeText(
-                    MainActivity.this,
-                    "Starting a new game!",
-                    Toast.LENGTH_SHORT
-            ).show();
-        });
+    private void checkGuess() {
 
-        buttonCheck.setOnClickListener(v -> {
-            String userInput = editTextGuess.getText().toString();
+        String input = editGuess.getText().toString().trim();
 
+        if (input.isEmpty()) {
+            showMessage("Введіть число");
+            return;
+        }
 
-            if (userInput.isEmpty()){
-                userInput = "empty";
-                Toast.makeText(
-                        MainActivity.this,
-                        "Your number іs empty: " + userInput,
-                        Toast.LENGTH_SHORT
-                ).show();
+        int number;
 
-                return;
-            }else {
+        try {
+            number = Integer.parseInt(input);
+        } catch (NumberFormatException exception) {
+            showMessage("Введіть коректне ціле число");
+            return;
+        }
 
+        if (number < 1 || number > 100) {
+            showMessage("Число повинно бути від 1 до 100");
+            return;
+        }
 
-                int number = Integer.parseInt(userInput);
+        GuessResult result = game.checkGuess(number);
 
-                attempts++;
+        showGuessResult(result);
+        updateAttempts();
 
+        editGuess.setText("");
+    }
 
-                if (secretNumber == number) {
-                    Toast.makeText(
-                            MainActivity.this,
-                            "win answer: " + number + ", Attempts: " + attempts,
-                            Toast.LENGTH_LONG
-                    ).show();
+    private void showGuessResult(GuessResult result) {
 
-                    buttonCheck.setEnabled(false);
-                    editTextGuess.setEnabled(false);
+        switch (result) {
 
-                } else if (secretNumber < number) {
-                    Toast.makeText(
-                            MainActivity.this,
-                            "Your number is larger. ",
-                            Toast.LENGTH_SHORT
-                    ).show();
-                } else if (secretNumber > number) {
-                    Toast.makeText(
-                            MainActivity.this,
-                            "Your number is smaller.",
-                            Toast.LENGTH_SHORT
-                    ).show();
-                }
+            case TOO_LOW:
+                textResult.setText("Загадане число більше");
+                break;
 
-            }
+            case TOO_HIGH:
+                textResult.setText("Загадане число менше");
+                break;
 
+            case CORRECT:
+                textResult.setText(
+                        "Вітаємо! Ви вгадали число за "
+                                + game.getAttempts()
+                                + " спроб!"
+                );
 
-        });
+                buttonCheck.setEnabled(false);
+                editGuess.setEnabled(false);
+                break;
+
+            case GAME_OVER:
+                textResult.setText(
+                        "Гру завершено. Почніть нову гру."
+                );
+                break;
+        }
+    }
+
+    private void startNewGame() {
+
+        int newSecretNumber = generator.generate();
+
+        game.startNewGame(newSecretNumber);
+
+        editGuess.setText("");
+        editGuess.setEnabled(true);
+        buttonCheck.setEnabled(true);
+
+        textResult.setText("Нова гра! Вгадайте число від 1 до 100");
+
+        updateAttempts();
+    }
+
+    private void updateAttempts() {
+        textAttempts.setText(
+                "Кількість спроб: " + game.getAttempts()
+        );
+    }
+
+    private void showMessage(String message) {
+        Toast.makeText(
+                this,
+                message,
+                Toast.LENGTH_SHORT
+        ).show();
     }
 }
