@@ -27,8 +27,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private int generateNumber() {
-//        return random.nextInt(100) + 1;
-        return 50;
+        return random.nextInt(100) + 1;
+//        return 50;
     }
 
     @Override
